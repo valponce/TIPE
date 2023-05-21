@@ -1,45 +1,47 @@
 import numpy as np,random,operator, matplotlib.pyplot as plt
-from pylab import figure,plot,show
-   
-class City:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-    
-    def distance(self, city):
-        xDis = abs(self.x - city.x)
-        yDis = abs(self.y - city.y)
-        distance = np.sqrt((xDis ** 2) + (yDis ** 2))
-        return distance
+from pylab import zeros,figure,plot,show
 
-    def __repr__(self):
-        return "(" + str(self.x) + "," + str(self.y) + ")"
+
+def TableauDistance (Citylist):
+    '''prend une liste de villes (= couple de coordonnées) et renvoie tableau des distances entre chaque'''
+    td=zeros((len(Citylist),len(Citylist)))
+    for i in range (len(Citylist)):
+        for j in range (len(Citylist)):
+            x,y=Citylist[i]
+            xbis,ybis= Citylist[j]
+            distance=np.sqrt((abs(x-xbis) ** 2) + (abs(y-ybis) ** 2))
+            td[i,j]=distance
+    return td
+
+#Citylist=[(1,2),(3,6),(5,4),(2,4),(3,2),(3,8),(9,7),(7,2),(0,5),(20,12)]
+#print(TableauDistance (Citylist))
 
 class Fitness:
-    def __init__(self, route):
+    def __init__(self, route,td):
         '''calcul longueur route entre plusieurs points'''
         self.route = route
         self.distance =0
         for i in range(0, len(self.route)-1):
             fromCity = self.route[i]
             toCity = self.route[i + 1]
-            self.distance+= fromCity.distance(toCity)  
+            self.distance+= td[fromCity,toCity]
+            
          
 
 
 def createRoute(cityList):
     '''creation route entre toutes villes au hazard'''
-    route = random.sample(cityList, len(cityList)) 
+    route = random.sample(range(len(cityList)),len(cityList)) 
     return route
 
 #L=[1,2,3,4,5]
 #print(createRoute (L))
 
-def Tri_Parcours(population):
-    ''' tri Polulation en fonction de la longueur totale de chaque route'''
+def Tri_Parcours(population,td):
+    ''' tri Polulation en fonction de la longueur totale de chaque route, population =liste de routes'''
     M=[]
     for i in range (0,len(population)):
-        M.append((i,Fitness(population[i]).distance))
+        M.append((i,Fitness(population[i],td).distance))
     return sorted(M,key = lambda item: item[1]) #lambda =fonction (entrée= item et renvoie item[1]) #sorted =tri par Fitness
 
 def selection (parcours_trie,eliteSize):
@@ -118,25 +120,27 @@ def mutatePopulation(population, mutationRate):
         mutatedPop.append(mutatedInd)
     return mutatedPop
 
-Citylist=[City(1,2),City(3,6),City(5,4),City(2,4),City(3,2),City(3,8),City(9,7),City(7,2),City(0,5),City(20,12)]
+Citylist=[(1,2),(3,6),(5,4),(2,4),(3,2),(3,8),(9,7),(7,2),(0,5),(20,12)]
 population=[createRoute(Citylist) for i in range(40)]
 eliteSize=10
 n=40
+td=TableauDistance(Citylist)
+#print (Tri_Parcours (population,td))
 for i in range (n):
-    parcours_trie=Tri_Parcours(population)
+    parcours_trie=Tri_Parcours(population,td)
     #print(population[:3])
-    print(parcours_trie[:3])
+    #print(parcours_trie[:3])
     matingpool=selection(parcours_trie,eliteSize)
     #print(matingpool)
     new_pop=breedPopulation(matingpool, eliteSize)
     #print(new_pop)
     population=mutatePopulation (new_pop,0.01)
 
-def affiche(Chemin):
+def affiche(Chemin,Citylist):
     figure()
-    lx=[k.x for k in Chemin]
-    ly=[k.y for k in Chemin]
+    lx=[Citylist[k][0] for k in Chemin]
+    ly=[Citylist[k][1] for k in Chemin]
     plot(lx,ly,color='black',marker='s')
-    plot(Chemin[0].x,Chemin[0].y,color='blue',marker='o')
+    plot(Citylist[Chemin[0]][0],Citylist[Chemin[0]][1],color='blue',marker='o')
     show ( )
-affiche(population[0])
+affiche(population[0],Citylist)
