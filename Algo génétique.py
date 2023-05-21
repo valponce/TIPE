@@ -17,48 +17,51 @@ class City:
 
 class Fitness:
     def __init__(self, route):
+        '''calcul longueur route entre plusieurs points'''
         self.route = route
         self.distance =0
         for i in range(0, len(self.route)-1):
             fromCity = self.route[i]
             toCity = self.route[i + 1]
-            self.distance+= fromCity.distance(toCity)
+            self.distance+= fromCity.distance(toCity)  
          
 
 
 def createRoute(cityList):
-    route = random.sample(cityList, len(cityList))
+    '''creation route entre toutes villes au hazard'''
+    route = random.sample(cityList, len(cityList)) 
     return route
 
 #L=[1,2,3,4,5]
 #print(createRoute (L))
 
 def Tri_Parcours(population):
+    ''' tri Polulation en fonction de la longueur totale de chaque route'''
     M=[]
     for i in range (0,len(population)):
         M.append((i,Fitness(population[i]).distance))
-    return sorted(M,key = lambda item: item[1]) #lambda =fonction (entrée= item et renvoie item[1])
+    return sorted(M,key = lambda item: item[1]) #lambda =fonction (entrée= item et renvoie item[1]) #sorted =tri par Fitness
 
 def selection (parcours_trie,eliteSize):
+    '''selection elitesize première puis autre en fonction pourcentage'''
     selectionResults=[]
     cum_som=0
     tot_som=sum([item[1] for item in parcours_trie])
     for i in range(0, eliteSize):
-        selectionResults.append(population[parcours_trie[i][0]])
-        cum_som+=parcours_trie[i][1]
+        selectionResults.append(population[parcours_trie[i][0]]) # recupération route i
+        cum_som+=parcours_trie[i][1] #ajout longueur route i
     for i in range(eliteSize, len(parcours_trie)):
         pick = random.random()
+        #selection pourcentage et comparaison au pourcentage sur somme distance pour savoir si on garde ville
         cum_som+=parcours_trie[i][1]
         #print(i,pick,cum_som/tot_som)
         if pick >= cum_som/tot_som:
             selectionResults.append(population[parcours_trie[i][0]])
     return selectionResults
 
-def createRoute(cityList):
-    route = random.sample(cityList, len(cityList))
-    return route
 
 def breed(parent1, parent2):
+    '''combinaison de route avec 2 particuliers'''
     fils = []
     filsP1 = []
     filsP2 = []
@@ -80,13 +83,15 @@ def breed(parent1, parent2):
     return fils
 
 def breedPopulation(matingpool, eliteSize):
+    ''' combinaison de route sur population entière
+        matingpool supposé ordonné'''
     children = matingpool.copy()
     length = len(matingpool) - eliteSize
     pool = random.sample(matingpool, len(matingpool))
 
     for i in range(0,eliteSize):
         children.append(matingpool[i])
-    
+    #création nouveau child
     for i in range(0, length):
         child = breed(pool[i], pool[len(matingpool)-i-1])
         #print('breeding',pool[i],pool[len(matingpool)-i-1],child)
@@ -94,6 +99,7 @@ def breedPopulation(matingpool, eliteSize):
     return children
 
 def mutate(route, mutationRate):
+    '''échange de villes dans la route'''
     for swapped in range(len(route)):
         if(random.random() < mutationRate):
             swapWith = int(random.random() * len(route))
