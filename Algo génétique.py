@@ -84,18 +84,19 @@ def breed(parent1, parent2):
     fils = filsP1 + filsP2
     return fils
 
-def breedPopulation(matingpool, eliteSize):
+def breedPopulation(matingpool, eliteSize,nbchildren):
     ''' combinaison de route sur population entière
         matingpool supposé ordonné'''
-    children = matingpool.copy()
-    length = len(matingpool) - eliteSize
-    pool = random.sample(matingpool, len(matingpool))
+    children = []
+    length = nbchildren- eliteSize
+    l=len(matingpool)
+    pool = random.sample(matingpool,l)
 
     for i in range(0,eliteSize):
         children.append(matingpool[i])
     #création nouveau child
     for i in range(0, length):
-        child = breed(pool[i], pool[len(matingpool)-i-1])
+        child = breed(pool[i%l], pool[(l-i-1)%l])
         #print('breeding',pool[i],pool[len(matingpool)-i-1],child)
         children.append(child)
     return children
@@ -120,21 +121,22 @@ def mutatePopulation(population, mutationRate):
         mutatedPop.append(mutatedInd)
     return mutatedPop
 
-Citylist=[(1,2),(3,6),(5,4),(2,4),(3,2),(3,8),(9,7),(7,2),(0,5),(20,12)]
-population=[createRoute(Citylist) for i in range(40)]
-eliteSize=10
-n=40
+import tsplib95
+problem = tsplib95.load('att48.tsp')
+Citylist= [problem.node_coords[n] for n in problem.get_nodes()]
+lpop=200
+population=[createRoute(Citylist) for i in range(lpop)]
+eliteSize=50
+n=5000
 td=TableauDistance(Citylist)
 #print (Tri_Parcours (population,td))
+
 for i in range (n):
     parcours_trie=Tri_Parcours(population,td)
-    #print(population[:3])
-    #print(parcours_trie[:3])
     matingpool=selection(parcours_trie,eliteSize)
-    #print(matingpool)
-    new_pop=breedPopulation(matingpool, eliteSize)
-    #print(new_pop)
-    population=mutatePopulation (new_pop,0.01)
+    new_pop=breedPopulation(matingpool, eliteSize,lpop)
+    population=mutatePopulation (new_pop,0.005)
+
 
 def affiche(Chemin,Citylist):
     figure()
@@ -144,3 +146,4 @@ def affiche(Chemin,Citylist):
     plot(Citylist[Chemin[0]][0],Citylist[Chemin[0]][1],color='blue',marker='o')
     show ( )
 affiche(population[0],Citylist)
+print(Fitness(population[0],td).distance)
