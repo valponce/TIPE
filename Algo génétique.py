@@ -136,6 +136,7 @@ for i in range (n):
     matingpool=selection(parcours_trie,eliteSize)
     new_pop=breedPopulation(matingpool, eliteSize,lpop)
     population=mutatePopulation (new_pop,0.005)
+parcours_trie=Tri_Parcours(population,td)    
 
 
 def affiche(Chemin,Citylist):
@@ -145,5 +146,7 @@ def affiche(Chemin,Citylist):
     plot(lx,ly,color='black',marker='s')
     plot(Citylist[Chemin[0]][0],Citylist[Chemin[0]][1],color='blue',marker='o')
     show ( )
-affiche(population[0],Citylist)
-print(Fitness(population[0],td).distance)
+winner=parcours_trie[0] #couple (indexe dans population,distance)
+print(winner[1])
+affiche(population[winner[0]],Citylist)
+
