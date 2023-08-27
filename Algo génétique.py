@@ -1,5 +1,9 @@
-import numpy as np,random,operator, matplotlib.pyplot as plt
+import numpy as np,random,operator, matplotlib.pyplot as plt, matplotlib
 from pylab import zeros,figure,plot,show
+from matplotlib.path import Path
+from matplotlib.patches import PathPatch
+from matplotlib.collections import PatchCollection
+import matplotlib.colors
 
 
 def TableauDistance (Citylist):
@@ -144,13 +148,18 @@ import pickle
 
 with open("Citylist.pkl", 'rb') as file:
     Citylist = pickle.load(file)
-with open("D:\TIPE\Citydistances.pkl", 'rb') as file:
+
+with open("Citydistances.pkl", 'rb') as file:
     td = pickle.load(file)
 
+with open("CantonPolys.pkl", 'rb') as file:
+    polys = list(pickle.load(file).values())
+
+
 print("data loaded")   
-lpop=200
-eliteSize=50
-n=50
+lpop=400
+eliteSize=100
+n=200
 
 population=[createRoute(Citylist) for i in range(lpop)]
 winner=None
@@ -166,13 +175,35 @@ for i in range (n):
     population=mutatePopulation (new_pop,0.005,0.01,Citylist,td)
 parcours_trie=Tri_Parcours(population,td)    
 
+colors = [matplotlib.colors.to_hex(plt.cm.tab20(i)) for i in range(20)]
+
+def plot_polygon(ax,poly, **kwargs):
+    path = Path.make_compound_path(Path(np.asarray(poly.exterior.coords)[:, :2]),*[Path(np.asarray(ring.coords)[:, :2]) for ring in poly.interiors])
+    patch = PathPatch(path, **kwargs)
+    collection = PatchCollection([patch], **kwargs)    
+    ax.add_collection(collection, autolim=True)
+
+def lighter(hex_color, perc=0.7):
+    """ takes a color like #87c95f and produces a lighter or darker variant """
+    rgb_hex = [int(hex_color[x:x+2], 16) for x in [1, 3, 5]]
+    new_rgb_int = [c + int(perc*(255-c)) for c in rgb_hex]
+    return "#" + "".join([hex(i)[2:] for i in new_rgb_int])
 
 def affiche(Chemin,Citylist):
-    figure()
+    fig, ax = plt.subplots()
+    ax.axis('off')
     lx=[Citylist[k[0]][k[1]][0] for k in Chemin] # k=k-ième ville du chemin ,k[0]=numéro canton,k[1]= numéro de la ville dans le canton
     ly=[Citylist[k[0]][k[1]][1] for k in Chemin]
-    plot(lx,ly,color='black',marker='s')
-    plot(Citylist[Chemin[0][0]][Chemin[0][1]][0],Citylist[Chemin[0][0]][Chemin[0][1]][1],color='blue',marker='o')
+    plot(lx,ly,color='black')
+    #plot(Citylist[Chemin[0][0]][Chemin[0][1]][0],Citylist[Chemin[0][0]][Chemin[0][1]][1],color='blue',marker='o')
+    for k in Chemin:
+        plot(Citylist[k[0]][k[1]][0],Citylist[k[0]][k[1]][1],color=colors[k[0]%len(colors)],marker='o')
+    for n in range(len(Citylist)):
+        color = colors[n%len(colors)]
+        # draw cantons
+        lightcolor = lighter(color)
+        for poly in polys[n].polys:
+            plot_polygon(ax,poly, color=lightcolor)
     show ( )
 
 print(best_length)
