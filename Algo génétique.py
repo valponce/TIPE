@@ -140,16 +140,19 @@ def mutatePopulation(population, mutationRate, mutationRateCluster,citylist,td):
         mutatedPop.append(mutatedInd)
     return mutatedPop
 
-import tsplib95
-problem = tsplib95.load('att48.tsp')
-#Citylist= [problem.node_coords[n] for n in problem.get_nodes()]
-Citylist=[[(1,2),(1,5),(2,2)],[(6,0),(5,3)],[(7,8),(7,6),(8,8),(8,6)],[(4,15),(5,12),(5,13)]]
+import pickle
+
+with open("Citylist.pkl", 'rb') as file:
+    Citylist = pickle.load(file)
+with open("D:\TIPE\Citydistances.pkl", 'rb') as file:
+    td = pickle.load(file)
+
+print("data loaded")   
 lpop=200
-population=[createRoute(Citylist) for i in range(lpop)]
 eliteSize=50
 n=50
-td=TableauDistance(Citylist)
-#print (Tri_Parcours (population,td))
+
+population=[createRoute(Citylist) for i in range(lpop)]
 winner=None
 best_length=9999999999999
 
