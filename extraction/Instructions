@@ -1,0 +1,54 @@
+# recuperation de la carte de suisse
+python telechargerSuisse.py
+
+# installation de open-elevation
+git clone http://github.com/Jorl17/open-elevation
+pip install -r requirements.txt
+cd open-elevation
+
+# recuperation des donnees d'altitude
+cd data
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_38_03.zip --output srtm_38_03.zip
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_38_04.zip --output srtm_38_04.zip
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_39_03.zip --output srtm_39_03.zip
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/srtm_39_04.zip --output srtm_39_04.zip
+unzip srtm_38_03.zip
+unzip srtm_38_04.zip
+unzip srtm_39_03.zip
+unzip srtm_39_04.zip
+../create-tiles.sh srtm_38_03.tif 10 10
+../create-tiles.sh srtm_38_04.tif 10 10
+../create-tiles.sh srtm_39_03.tif 10 10
+../create-tiles.sh srtm_39_04.tif 10 10
+cd ..
+mkdir tiles
+mv data/srtm_??_??_?_?.tif tiles
+
+# calcul des temps de parcours a velo
+python server.py &
+python tempsParcours.py
+
+# simplification de la carte de suisse
+yum install spatialindex.x86_64
+python consolidation.py
+
+# extraction de la carte des cantons
+curl https://labs.karavia.ch/swiss-boundaries-geojson/geojson/2020/swissBOUNDARIES3D_1_3_TLM_KANTONSGEBIET.geojson --output swissBOUNDARIES3D_1_3_TLM_KANTONSGEBIET.geojson
+python polygonesDesCantons.py
+
+# creation d'un digraph et creation de plusieures tables de correspondance
+python creationDiGraph.py
+
+# simplification du graphe
+python simplification.py
+
+# calcul des toutes les distances entre 2 noeuds du graphe simplifie
+python distances.py
+
+# resolution du probleme
+python Algo_génétique.py
+
+# affichage graphique de la solution
+python carte.py
+
+
