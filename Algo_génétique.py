@@ -4,25 +4,7 @@ from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from matplotlib.collections import PatchCollection
 import matplotlib.colors
-
-
-def TableauDistance (listeVilles):
-    '''prend une liste de villes (= couple de coordonnées) et renvoie tableau des distances entre chaque'''
-    td={}
-    for clusteri in range (len(listeVilles)):
-        for i in range (len(listeVilles[clusteri])):
-            td[(clusteri,i)]={}
-            x,y=listeVilles[clusteri][i]
-            for clusterj in range (len(listeVilles)):
-                for j in range (len(listeVilles[clusterj])):
-                    xbis,ybis= listeVilles[clusterj][j]
-                    distance=np.sqrt((abs(x-xbis) ** 2) + (abs(y-ybis) ** 2))
-                    td[(clusteri,i)][(clusterj,j)]=distance
-    return td
-
-#listeVilles=[(1,2),(3,6),(5,4),(2,4),(3,2),(3,8),(9,7),(7,2),(0,5),(20,12)]
-#print(TableauDistance (listeVilles))
-
+from convert_data import convert
 
 def obtenir_distance(route,td):
         '''calcul longueur route entre plusieurs points'''
@@ -34,18 +16,23 @@ def obtenir_distance(route,td):
         return distance
 
 
-
 def creationRoute(listeVilles):
     '''creation route entre toutes villes au hazard'''
     route=[]
-    liste_canton = random.sample(range(len(listeVilles)),len(listeVilles)) 
-    for x in liste_canton:
-        route.append((x,random.randint(0,len(listeVilles[x])-1)))
-    print(len(route))
-    return route
+    obligatoires=[]
+    for x in range(len(listeVilles)):
+        if len(listeVilles[x])>4:
+            '''canton normal'''
+            route.append((x,random.randint(0,len(listeVilles[x])-1))) 
+        else:
+            '''canton avec passages obligatoires où les seules villes sont ces passages
+                sauf Bern qui sera rajoutée à la fin à la main'''
+            obligatoires.append((x,k) for k in listeVilles[x] and (x,k)!=Bern)
+    '''supression de deux villes au hasard car on a le droit de sauter deux cantons'''
+    route=random.sample(route,len(route))[:-2]
+    route.extend(obligatoires)
+    return random.sample(route,len(route))+[bern]
 
-#L=[[1,2,3],[4,5,6],[7,6]]
-#print(creationRoute (L))
 
 def Tri_Parcours(population,td):
     ''' tri Polulation en fonction de la longueur totale de chaque route, population =liste de routes'''
@@ -77,22 +64,40 @@ def croiser(parent1, parent2):
     fils = []
     filsP1 = []
     filsP2 = []
-    
-    geneA = int(random.random() * len(parent1))
-    geneB = int(random.random() * len(parent1))
+
+    '''selection d'une partie du parent1 excluant la ville d'arrivée qui doit être Bern'''
+    geneA = int(random.random() * (len(parent1)-1))
+    geneB = int(random.random() * (len(parent1)-1))
     while geneA==geneB:
         geneB = int(random.random() * len(parent1))
     #print('gene',geneA,geneB)
     debutGene = min(geneA, geneB)
     finGene = max(geneA, geneB)
-
     for i in range(debutGene, finGene):
         filsP1.append(parent1[i])
-    clusterfilsP1=[k[0] for k in filsP1]
-    filsP2 = [item for item in parent2 if item[0] not in clusterfilsP1]
 
+    '''on conserve ensuite de parent2 :
+        - les villes de cluster non visités dans fils1
+        - les villes obligatoires non visités dans fils1 '''
+    clusterfilsP1=[k[0] for k in filsP1]
+    filsP2 = [item for item in parent2
+              if item[0] not in clusterfilsP1
+              or (item in villesObligatoires and item not in filsP1) ]
     fils = filsP1 + filsP2
+    
+    ''' l'algorithme précédent peut amener à visiter plus de cluster que nécessaire :
+        chaque parent ne visite que 24 des 26 cantons, mais s'ils n'évitent pas les mêmes cantons,
+        le fils peut visiter jusqu'à 26 cantons.
+        Nous allons donc en suppimer 2 au hasard.'''
+    clusterfils = set([k[0] for k in fils])
+    while len(clusterfils) > 25: # 24 + 1 pour les inclusions étrangères qui ont -1 pour numéro de canton
+        n = int(random.random() * (len(fils)))
+        ville = fils[n]
+        if ville not in villesObligatoires:
+            clusterfils.remove(ville[0])
+            fils.remove(ville)
     return fils
+
 
 def croiserPopulation(popAccouplement, nbElite,nbEnfants):
     ''' combinaison de route sur population entière
@@ -104,7 +109,7 @@ def croiserPopulation(popAccouplement, nbElite,nbEnfants):
 
     for i in range(0,nbElite):
         listeEnfants.append(popAccouplement[i])
-    #création nouveau enfant
+    '''création nouveau enfant'''
     for i in range(0, longueur):
         enfant = croiser(groupe[i%l], groupe[(l-i-1)%l])
         #print('croissement',groupe[i],groupe[len(popAccouplement)-i-1],enfant)
@@ -112,29 +117,33 @@ def croiserPopulation(popAccouplement, nbElite,nbEnfants):
     return listeEnfants
 
 def muter(route, tauxMutation, tauxMutationCluster,listeVilles,td):
-    '''échange de villes dans la route'''
-    for echange in range(len(route)):
+    for echange in range(len(route)-1): # on laisse Bern en fin de route
         ville1 = route[echange]
+        '''inversion de deux villes dans la route '''
         if(random.random() < tauxMutation):
-            echangeAvec = int(random.random() * len(route))
+            echangeAvec = int(random.random() * (len(route)-1)) # on évite Bern
             #print('muter',echange,echangeAvec)
             ville2 = route[echangeAvec]
             
             route[echange] = ville2
             route[echangeAvec] = ville1
-        if (random.random () < tauxMutationCluster):
+
+        ''' changement de ville dans le cluster'''
+        if (random.random () < tauxMutationCluster) and ville1 not in villesObligatoires :
             echangeAvec2 = int(random.random() * len(listeVilles[ville1[0]])) #ville1[0]= numéro canton, ville1= n-ième ville de la route
             route[echange]= (ville1[0],echangeAvec2)
-##        for autre in range(echange+2, min(echange+4, len(route)-1)): #2op
-##            i1= route[echange]
-##            i2= route[echange+1]
-##            j1= route[autre]
-##            j2= route[autre+1]
-##            gain= td[i1][i2]+td[j1][j2]-td[i1][j1]-td[i2][j2]
-##            if gain >0 :
-##                r=route[echange+1]
-##                route[echange+1]= route[autre]
-##                route[autre]=r
+
+        ''' optimisation 2op pour optimiser la convergence de l'algo'''
+        for autre in range(echange+2, min(echange+4, len(route)-2)): # on évite Bern 
+            i1= route[echange]
+            i2= route[echange+1]
+            j1= route[autre]
+            j2= route[autre+1]
+            gain= td[i1][i2]+td[j1][j2]-td[i1][j1]-td[i2][j2]
+            if gain >0 :
+                r=route[echange+1]
+                route[echange+1]= route[autre]
+                route[autre]=r
     return route
 
 
@@ -147,7 +156,7 @@ def muterPopulation(population, tauxMutation, tauxMutationCluster,listeVilles,td
 
 import pickle
 
-with open("Citylist.pkl", 'rb') as file:
+with open("ListeVilles.pkl", 'rb') as file:
     ListeVilles = pickle.load(file)
 
 with open("Citydistances.pkl", 'rb') as file:
@@ -155,6 +164,9 @@ with open("Citydistances.pkl", 'rb') as file:
 
 with open("CantonPolys.pkl", 'rb') as file:
     polys = list(pickle.load(file).values())
+
+with open("VillesProtegees.pkl", 'rb') as file:
+    bern, villesObligatoires = pickle.load(file)
 
 
 print("data loaded")   
