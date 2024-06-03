@@ -4,15 +4,14 @@ from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from matplotlib.collections import PatchCollection
 import matplotlib.colors
-from convert_data import convert
 
 def obtenir_distance(route,td):
         '''calcul longueur route entre plusieurs points'''
         distance =0
         for i in range(0, len(route)-1):
-            depart =route[i]
-            arrivee =route[i + 1]
-            distance+= td[depart][arrivee]
+            depart = route[i]
+            arrivee = route[i + 1]
+            distance += td[depart][arrivee]
         return distance
 
 
@@ -27,7 +26,7 @@ def creationRoute(listeVilles):
         else:
             '''canton avec passages obligatoires où les seules villes sont ces passages
                 sauf Bern qui sera rajoutée à la fin à la main'''
-            obligatoires.append((x,k) for k in listeVilles[x] and (x,k)!=Bern)
+            obligatoires.extend([(x,k) for k in range(len(listeVilles[x])) if (x,k)!=bern])
     '''supression de deux villes au hasard car on a le droit de sauter deux cantons'''
     route=random.sample(route,len(route))[:-2]
     route.extend(obligatoires)
@@ -38,7 +37,11 @@ def Tri_Parcours(population,td):
     ''' tri Polulation en fonction de la longueur totale de chaque route, population =liste de routes'''
     M=[]
     for i in range (0,len(population)):
-        M.append((i,obtenir_distance(population[i],td)))
+        try:
+            M.append((i,obtenir_distance(population[i],td)))
+        except KeyError:
+            # route impossible. Cela peut erriver a cause de voies a sens unique
+            None
     return sorted(M,key = lambda item: item[1]) #lambda =fonction (entrée= item et renvoie item[1]) #sorted =tri par distance
 
 def selection (parcours_trie,nbElite):
@@ -129,6 +132,7 @@ def muter(route, tauxMutation, tauxMutationCluster,listeVilles,td):
             route[echangeAvec] = ville1
 
         ''' changement de ville dans le cluster'''
+        ville1 = route[echange]
         if (random.random () < tauxMutationCluster) and ville1 not in villesObligatoires :
             echangeAvec2 = int(random.random() * len(listeVilles[ville1[0]])) #ville1[0]= numéro canton, ville1= n-ième ville de la route
             route[echange]= (ville1[0],echangeAvec2)
@@ -139,11 +143,15 @@ def muter(route, tauxMutation, tauxMutationCluster,listeVilles,td):
             i2= route[echange+1]
             j1= route[autre]
             j2= route[autre+1]
-            gain= td[i1][i2]+td[j1][j2]-td[i1][j1]-td[i2][j2]
-            if gain >0 :
-                r=route[echange+1]
-                route[echange+1]= route[autre]
-                route[autre]=r
+            try:
+                gain= td[i1][i2]+td[j1][j2]-td[i1][j1]-td[i2][j2]
+                if gain > 0:
+                    r=route[echange+1]
+                    route[echange+1]= route[autre]
+                    route[autre]=r
+            except KeyError:
+                # route impossible. Cela peut erriver a cause de voies a sens unique
+                None
     return route
 
 
@@ -159,10 +167,10 @@ import pickle
 with open("ListeVilles.pkl", 'rb') as file:
     ListeVilles = pickle.load(file)
 
-with open("Citydistances.pkl", 'rb') as file:
+with open("SuisseDistances.pkl", 'rb') as file:
     td = pickle.load(file)
 
-with open("CantonPolys.pkl", 'rb') as file:
+with open("PolygonesCantons.pkl", 'rb') as file:
     polys = list(pickle.load(file).values())
 
 with open("VillesProtegees.pkl", 'rb') as file:
@@ -170,9 +178,9 @@ with open("VillesProtegees.pkl", 'rb') as file:
 
 
 print("data loaded")   
-lpop=400
-nbElite=100
-n=2000
+lpop=800
+nbElite=200
+n=10000
 
 population=[creationRoute(ListeVilles) for i in range(lpop)]
 gagnant=None
@@ -182,11 +190,11 @@ for i in range (n):
     parcours_trie=Tri_Parcours(population,td)
     if parcours_trie[0][1]<meilleur_longueur:
         meilleur_longueur=parcours_trie[0][1]
-        gagnant= population[parcours_trie[0][0]]
+        gagnant= population[parcours_trie[0][0]][:]
     popAccouplement=selection(parcours_trie,nbElite)
     nouvelle_pop=croiserPopulation(popAccouplement, nbElite,lpop)
     population=muterPopulation (nouvelle_pop,0.005,0.01,ListeVilles,td)
-parcours_trie=Tri_Parcours(population,td)    
+parcours_trie=Tri_Parcours(population,td)
 
 couleurs = [matplotlib.colors.to_hex(plt.cm.tab20(i)) for i in range(20)]
 
@@ -217,7 +225,7 @@ def affiche(Chemin,listeVilles):
         couleur = couleurs[n%len(couleurs)]
         # draw cantons
         couleurClaire = plus_clair(couleur)
-        for poly in polys[n].polys:
+        for poly in polys[n].polygones:
             tracer_polygone(ax,poly, color=couleurClaire)
     show ( )
 

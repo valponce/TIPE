@@ -40,7 +40,8 @@ def simplifierGraphe(graphe, cantonPourNoeud, cantonASupprimer, noeudsProteges, 
     # on passe en revue les noeuds du graphe initial
     for noeud in graphe.nodes:
         if noeud in noeudsProteges: continue
-        if cantonPourNoeud[noeud] in cantonASupprimer or noeudInterne(grapheSimple, noeud, cantonPourNoeud):
+        if cantonPourNoeud[noeud] in cantonASupprimer
+        or noeudInterne(grapheSimple, noeud, cantonPourNoeud):
             # on peut supprimer le noeud
             aretesEntrantes = list(grapheSimple.in_edges(noeud))
             aretesSortantes = list(grapheSimple.out_edges(noeud))
@@ -101,24 +102,25 @@ print(grapheSimple)
 grapheSimple = simplifierGraphe(grapheSimple, cantonPourNoeud, cantonASupprimer, noeudsProteges, None)
 print(grapheSimple)
 
+pickle.dump(grapheSimple, open('SuisseSimplifiee.pkl', 'wb'))
+
 # calcul de la nouvelle liste de villes par canton
 listeVilles=[]
-tableConversion={}
+tableConvertion={}
 villesProtegees=[]
 for c in noeudsDunCanton:
     listeCoord=[]
     ncluster=len(listeVilles)
     for n in c:
         if n in grapheSimple.nodes():
-            tableConversion[n]=(ncluster,len(listeCoord))
+            tableConvertion[n]=(ncluster,len(listeCoord))
             listeCoord.append(coordonnees[n])
             if n in noeudsProteges:
                 villesProtegees.append(tableConvertion[n])
     listeVilles.append(listeCoord)
     
-bern=tableConversion[pointsDePassage['BERN']]
+bern=tableConvertion[noeudPourOsmid[pointsDePassage['BERN']]]
 
-pickle.dump((bern,villesProtegees), open('VillesProtegees', 'wb'))    
-pickle.dump(tableConversion, open('TableConversion.pkl', 'wb'))
-pickle.dump(grapheSimple, open('SuisseSimplifiee.pkl', 'wb'))
+pickle.dump((bern,villesProtegees), open('VillesProtegees.pkl', 'wb'))
+pickle.dump(tableConvertion, open('TableConvertion.pkl', 'wb'))
 pickle.dump(listeVilles, open('ListeVilles.pkl', 'wb'))
