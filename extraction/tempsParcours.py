@@ -35,11 +35,11 @@ def vitessePourPuissance(puissance, pente):
   return vmoy
 
 # Table de valeurs precalculees de la vitesse pour une pente donnee
-# on suppose la puissance constante a 250W
+# on suppose la puissance constante a 200W
 vitessePourPente = {}
 for n in range(-30,31):
   pente = n/2
-  vitessePourPente[pente] = vitessePourPuissance(250, pente)
+  vitessePourPente[pente] = vitessePourPuissance(200, pente)
 
 def calculeVitesse(pente):
   '''
